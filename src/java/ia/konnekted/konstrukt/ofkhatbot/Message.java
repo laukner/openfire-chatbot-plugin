@@ -1,7 +1,8 @@
 package ia.konnekted.konstrukt.ofkhatbot;
 
-import io.github.amithkoujalgi.ollama4j.core.models.chat.OllamaChatMessage;
-import io.github.amithkoujalgi.ollama4j.core.models.chat.OllamaChatMessageRole;
+import io.github.ollama4j.models.chat.OllamaChatMessage;
+import io.github.ollama4j.models.chat.OllamaChatMessageRole;
+
 import lombok.ToString;
 import lombok.Value;
 import org.jivesoftware.util.cache.CacheSizes;
