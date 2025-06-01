@@ -1,7 +1,8 @@
 package ia.konnekted.konstrukt.ofkhatbot;
 
-import io.github.amithkoujalgi.ollama4j.core.models.chat.OllamaChatMessageRole;
-import io.github.amithkoujalgi.ollama4j.core.utils.PromptBuilder;
+import io.github.ollama4j.models.chat.OllamaChatMessageRole;
+import io.github.ollama4j.utils.PromptBuilder;
+
 import org.apache.commons.lang3.StringUtils;
 import org.dom4j.Element;
 import org.igniterealtime.openfire.botz.BotzConnection;
@@ -132,6 +133,9 @@ public class ChatbotPlugin implements Plugin, PropertyEventListener, MUCEventLis
 
         PropertyEventDispatcher.addListener(this);
         MUCEventDispatcher.addListener(this);
+
+        // Log.info("Botz plugin initialized !");
+
     }
 
     @Override
@@ -266,6 +270,9 @@ public class ChatbotPlugin implements Plugin, PropertyEventListener, MUCEventLis
                     Log.trace("Interrupted while waiting to unlock", e);
                 }
             }
+
+            // Log.info("Botz plugin has joined room %s !", mucRoom.getName());
+
             service.syncChatRoom(mucRoom);
         }
     }
