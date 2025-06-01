@@ -1,13 +1,15 @@
 package ia.konnekted.konstrukt.ofkhatbot;
 
-import io.github.amithkoujalgi.ollama4j.core.OllamaAPI;
-import io.github.amithkoujalgi.ollama4j.core.OllamaStreamHandler;
-import io.github.amithkoujalgi.ollama4j.core.exceptions.OllamaBaseException;
-import io.github.amithkoujalgi.ollama4j.core.models.Model;
-import io.github.amithkoujalgi.ollama4j.core.models.chat.*;
-import io.github.amithkoujalgi.ollama4j.core.utils.Options;
-import io.github.amithkoujalgi.ollama4j.core.utils.OptionsBuilder;
-import io.github.amithkoujalgi.ollama4j.core.utils.PromptBuilder;
+import io.github.ollama4j.OllamaAPI;
+import io.github.ollama4j.models.generate.OllamaStreamHandler;
+import io.github.ollama4j.exceptions.OllamaBaseException;
+import io.github.ollama4j.models.response.Model;
+import io.github.ollama4j.models.chat.*;
+import io.github.ollama4j.utils.Options;
+import io.github.ollama4j.utils.OptionsBuilder;
+import io.github.ollama4j.utils.PromptBuilder;
+import io.github.ollama4j.exceptions.ToolInvocationException;
+
 import lombok.extern.flogger.Flogger;
 import org.apache.commons.lang3.StringUtils;
 import org.igniterealtime.openfire.botz.BotzConnection;
@@ -77,11 +79,11 @@ public class ChatBotzPacketReceiver implements BotzPacketReceiver {
             boolean found = models.stream().anyMatch(model -> { return model.getModelName().startsWith(plugin.getChatModelSettings().getModel());});
             if (!found) {
                 ollamaAPI.pullModel(plugin.getChatModelSettings().getModel());
-            }
+           }
         } catch (OllamaBaseException | IOException | InterruptedException | URISyntaxException e) {
             Log.error("Failed to load AI model",e);
-        }
-    }
+       }
+   }
 
     @Override
     public void processIncoming(Packet packet) {
@@ -93,6 +95,7 @@ public class ChatBotzPacketReceiver implements BotzPacketReceiver {
                     case groupchat:
                         JID from = packet.getFrom();
                         // Private message , one-on-one message received, use ChatLanguageModel
+
                         if(!plugin.getChatModelSettings().getAlias().equals(from.getResource())){
                             converse((org.xmpp.packet.Message) packet);
                         }
@@ -112,6 +115,7 @@ public class ChatBotzPacketReceiver implements BotzPacketReceiver {
 
     private void converse(org.xmpp.packet.Message message) {
         Log.info("converse: {}", message);
+
         executor.execute(new Runnable() {
             @Override
             public void run() {
@@ -134,7 +138,7 @@ public class ChatBotzPacketReceiver implements BotzPacketReceiver {
 
 
                 List<OllamaChatMessage> messages = plugin.getCachedMessages(message.getFrom().asBareJID()).stream().map(msg -> new OllamaChatMessage(msg.getRole(), msg.getContent())).collect(Collectors.toList());
-                OllamaChatRequestModel request = OllamaChatRequestBuilder.getInstance(plugin.getChatModelSettings().getModel())
+                OllamaChatRequest request = OllamaChatRequestBuilder.getInstance(plugin.getChatModelSettings().getModel())
                         .withMessages(messages)
                         .withMessage(OllamaChatMessageRole.USER, message.getBody())
                         .withOptions(options)
@@ -154,12 +158,16 @@ public class ChatBotzPacketReceiver implements BotzPacketReceiver {
                         Log.info("Problem encountered pinging ollama API", e);
                     }
 
-                    result = ollamaAPI.chat(request, streamHandler);
-                    while (!completed.get()) {
+                    try {
+                        result = ollamaAPI.chat(request, streamHandler);
+                        while (!completed.get()) {
                            sleep(100);
+                        } 
+                    } catch (ToolInvocationException e) {
+                        Log.info("Problem encountered invocing ollamaAPI.chat()", e);
                     }
                 } catch (OllamaBaseException | IOException | InterruptedException e) {
-                    Log.info(String.format("Problem encountered performing request: %s", request),e);
+                  Log.info(String.format("Problem encountered performing request: %s", request),e);
                 }
 
                 Log.info("Converse.Result: {}", sb.toString());
@@ -218,7 +226,7 @@ public class ChatBotzPacketReceiver implements BotzPacketReceiver {
                 List<OllamaChatMessage> messages = new LinkedList<>();
 
 
-                OllamaChatRequestModel request = (!StringUtils.isEmpty(plugin.getChatModelSettings().getSystemPrompt()) ?
+                OllamaChatRequest request = (!StringUtils.isEmpty(plugin.getChatModelSettings().getSystemPrompt()) ?
                         OllamaChatRequestBuilder.getInstance(plugin.getChatModelSettings().getModel()).withMessage(OllamaChatMessageRole.SYSTEM, prompt)
                         : OllamaChatRequestBuilder.getInstance(plugin.getChatModelSettings().getModel()))
                         .withMessage(OllamaChatMessageRole.USER, message.getBody())
@@ -238,10 +246,16 @@ public class ChatBotzPacketReceiver implements BotzPacketReceiver {
                     }catch(Exception  e) {
                         Log.debug("Problem encountered pinging ollama API", e);
                     }
-                    result = ollamaAPI.chat(request, streamHandler);
-                    while (!completed.get()) {
-                            sleep(100);
+
+                    try {
+                        result = ollamaAPI.chat(request, streamHandler);
+                        while (!completed.get()) {
+                                sleep(100);
+                        }
+                    } catch (ToolInvocationException e) {
+                        Log.info("Problem encountered invocing ollamaAPI.chat()", e);
                     }
+
                 } catch (OllamaBaseException | IOException | InterruptedException e) {
                     Log.info(String.format("Problem encountered performing request: %s", request),e);
                 }
